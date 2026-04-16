@@ -1,7 +1,11 @@
+import logging
 import requests
 from typing import List, Dict
 from interfaces.llm import BaseLLM
 from core.entities import Document
+
+logger = logging.getLogger(__name__)
+
 
 class OllamaLLM(BaseLLM):
     def __init__(self, model_name: str, temperature: float = 0.1, base_url: str = "http://localhost:11434"):
@@ -10,6 +14,13 @@ class OllamaLLM(BaseLLM):
         self.base_url = base_url
 
     def generate(self, prompt: str, context: List[Document], chat_history: List[Dict]) -> str:
+        logger.debug(
+            "Calling Ollama chat API (model=%s, context_docs=%d, history_messages=%d)",
+            self.model_name,
+            len(context),
+            len(chat_history),
+        )
+
         # 1. Format the context from retrieved documents
         context_text = "\n\n---\n\n".join([doc.text for doc in context])
         
@@ -34,7 +45,9 @@ class OllamaLLM(BaseLLM):
             }
         }
         
-        response = requests.post(f"{self.base_url}/api/chat", json=payload)
+        response = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=120)
         response.raise_for_status() # Raise an error if the request fails
-        
-        return response.json()["message"]["content"]
+
+        answer = response.json()["message"]["content"]
+        logger.debug("Ollama response received (chars=%d)", len(answer))
+        return answer

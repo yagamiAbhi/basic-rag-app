@@ -1,4 +1,4 @@
-import os
+import logging
 import yaml
 from dotenv import load_dotenv
 
@@ -14,14 +14,22 @@ from modules.ingestion.service import IngestionService
 from modules.retrieval.service import RetrievalService
 from modules.generation.service import GenerationService
 
+logger = logging.getLogger(__name__)
+
+
 class ComponentFactory:
     def __init__(self, config_path: str = "config.yaml"):
+        load_dotenv()
+        logger.debug("Loaded environment variables from .env (if present)")
+
         # Load behavior from config.yaml
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
+        logger.debug("Loaded configuration from %s", config_path)
             
         # Dynamically instantiate the Vector Store based on config
         vs_config = self.config["vector_store"]
+        logger.debug("Selected vector store provider: %s", vs_config["provider"])
         
         if vs_config["provider"] == "memory":
             self._vector_store = InMemoryVectorStore()
@@ -32,6 +40,7 @@ class ComponentFactory:
             )
         else:
             raise ValueError(f"Unsupported vector store: {vs_config['provider']}")
+        logger.info("Vector store initialized: %s", vs_config["provider"])
 
     def get_ingestion_service(self) -> IngestionService:
         loader = TxtDocumentLoader()
@@ -44,6 +53,12 @@ class ComponentFactory:
 
         chunk_size = self.config["ingestion"].get("chunk_size", 1000)
         chunk_overlap = self.config["ingestion"].get("chunk_overlap", 200)
+        logger.debug(
+            "Building IngestionService (embedder=%s, chunk_size=%d, chunk_overlap=%d)",
+            embedder_config["provider"],
+            chunk_size,
+            chunk_overlap,
+        )
 
         return IngestionService(
             loader=loader,
@@ -62,6 +77,11 @@ class ComponentFactory:
             raise ValueError(f"Unsupported embedder provider: {embedder_config['provider']}")
         
         top_k = self.config["retrieval"].get("top_k", 5)
+        logger.debug(
+            "Building RetrievalService (embedder=%s, top_k=%d)",
+            embedder_config["provider"],
+            top_k,
+        )
 
         return RetrievalService(
             embedder=embedder,
@@ -79,5 +99,11 @@ class ComponentFactory:
             )
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_config['provider']}")
+        logger.debug(
+            "Building GenerationService (llm=%s, model=%s, temperature=%s)",
+            llm_config["provider"],
+            llm_config["model_name"],
+            llm_config["temperature"],
+        )
 
         return GenerationService(llm=llm)

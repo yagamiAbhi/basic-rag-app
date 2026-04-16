@@ -1,7 +1,11 @@
+import logging
 import math
 from typing import List
 from interfaces.vector_store import BaseVectorStore
 from core.entities import Document
+
+logger = logging.getLogger(__name__)
+
 
 class InMemoryVectorStore(BaseVectorStore):
     def __init__(self):
@@ -9,7 +13,11 @@ class InMemoryVectorStore(BaseVectorStore):
 
     def upsert(self, documents: List[Document]) -> None:
         self.documents.extend(documents)
-        print(f"Upserted {len(documents)} documents to memory. Total: {len(self.documents)}")
+        logger.info(
+            "Upserted %d document(s) to memory store (total=%d)",
+            len(documents),
+            len(self.documents),
+        )
 
     def search(self, query_embedding: List[float], top_k: int) -> List[Document]:
         # Helper function for Cosine Similarity
@@ -27,4 +35,11 @@ class InMemoryVectorStore(BaseVectorStore):
         
         # Sort by score descending and return top_k
         scored_docs.sort(key=lambda x: x[0], reverse=True)
-        return [doc for score, doc in scored_docs[:top_k]]
+        top_docs = [doc for score, doc in scored_docs[:top_k]]
+        logger.debug(
+            "Memory search completed (top_k=%d, candidates=%d, returned=%d)",
+            top_k,
+            len(scored_docs),
+            len(top_docs),
+        )
+        return top_docs

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from typing import List
 
 from core.entities import Document
+
+logger = logging.getLogger(__name__)
 
 
 class TextSplitter:
@@ -26,6 +29,11 @@ class TextSplitter:
             text = doc.text or ""
             if len(text) <= self.chunk_size:
                 chunked_documents.append(doc)
+                logger.debug(
+                    "Document %s retained as single chunk (chars=%d)",
+                    doc.id,
+                    len(text),
+                )
                 continue
 
             start = 0
@@ -48,5 +56,14 @@ class TextSplitter:
 
                 chunk_index += 1
                 start += step
+
+            logger.debug(
+                "Document %s split into %d chunk(s) (chars=%d, chunk_size=%d, overlap=%d)",
+                doc.id,
+                chunk_index,
+                len(text),
+                self.chunk_size,
+                self.chunk_overlap,
+            )
 
         return chunked_documents

@@ -1,14 +1,24 @@
+import logging
 import requests
 from typing import List
 from interfaces.embedder import BaseEmbedder
 from core.entities import Document
+
+logger = logging.getLogger(__name__)
+
 
 class OllamaEmbedder(BaseEmbedder):
     def __init__(self, model_name: str, base_url: str = "http://127.0.0.1:11434"):
         self.model_name = model_name
         self.base_url = base_url
 
-    def embed_text(self, text: str) -> List[float]:
+    def _embed_text(self, text: str, emit_logs: bool = True) -> List[float]:
+        if emit_logs:
+            logger.debug(
+                "Requesting embedding from Ollama (model=%s, input_chars=%d)",
+                self.model_name,
+                len(text),
+            )
         payload = {
             "model": self.model_name,
             "prompt": text
@@ -27,12 +37,26 @@ class OllamaEmbedder(BaseEmbedder):
                 f"Ollama embedding failed for model '{self.model_name}': {error_message}"
             ) from exc
         
-        return response.json()["embedding"]
+        embedding = response.json()["embedding"]
+        if emit_logs:
+            logger.debug("Embedding received (dimensions=%d)", len(embedding))
+        return embedding
+
+    def embed_text(self, text: str) -> List[float]:
+        return self._embed_text(text, emit_logs=True)
 
     def embed_documents(self, documents: List[Document]) -> List[Document]:
-        # Ollama's /api/embeddings endpoint processes one text at a time.
-        # We loop through and attach embeddings sequentially.
-        for doc in documents:
-            doc.embedding = self.embed_text(doc.text)
-            
+        logger.debug(
+            "Embedding %d document chunk(s) with Ollama model %s",
+            len(documents),
+            self.model_name,
+        )
+
+        total_docs = len(documents)
+        for index, doc in enumerate(documents, start=1):
+            doc.embedding = self._embed_text(doc.text, emit_logs=False)
+            if index % 50 == 0 or index == total_docs:
+                logger.debug("Embedding progress: %d/%d chunk(s)", index, total_docs)
+
+        logger.debug("Attached embeddings to %d document chunk(s)", len(documents))
         return documents

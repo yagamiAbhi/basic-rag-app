@@ -1,17 +1,27 @@
+import logging
 import chromadb
 from typing import List
 from interfaces.vector_store import BaseVectorStore
 from core.entities import Document
 
+logger = logging.getLogger(__name__)
+
+
 class ChromaVectorStore(BaseVectorStore):
     def __init__(self, collection_name: str, persist_directory: str = "./chroma_db"):
         # This creates a local SQLite-backed database on your hard drive
+        logger.debug(
+            "Initializing ChromaDB client (collection=%s, path=%s)",
+            collection_name,
+            persist_directory,
+        )
         self.client = chromadb.PersistentClient(path=persist_directory)
         
         # Note: We do not pass an embedding function to Chroma here. 
         # Why? Because our architecture explicitly handles embeddings via the 
         # BaseEmbedder interface *before* sending data to the vector store.
         self.collection = self.client.get_or_create_collection(name=collection_name)
+        logger.info("Chroma collection ready: %s", self.collection.name)
 
     def upsert(self, documents: List[Document]) -> None:
         if not documents:
@@ -30,7 +40,11 @@ class ChromaVectorStore(BaseVectorStore):
             metadatas=metadatas,
             embeddings=embeddings
         )
-        print(f"Upserted {len(documents)} documents into ChromaDB collection '{self.collection.name}'.")
+        logger.info(
+            "Upserted %d document(s) into Chroma collection '%s'",
+            len(documents),
+            self.collection.name,
+        )
 
     def search(self, query_embedding: List[float], top_k: int) -> List[Document]:
         # Query Chroma using the raw vector
@@ -51,4 +65,9 @@ class ChromaVectorStore(BaseVectorStore):
                 )
                 retrieved_docs.append(doc)
 
+        logger.debug(
+            "Chroma search completed (top_k=%d, returned=%d)",
+            top_k,
+            len(retrieved_docs),
+        )
         return retrieved_docs
