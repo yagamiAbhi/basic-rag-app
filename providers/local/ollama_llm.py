@@ -3,10 +3,11 @@ import requests
 from typing import List, Dict
 from interfaces.llm import BaseLLM
 from core.entities import Document
+from core.registry import ProviderRegistry # <-- V2
 
 logger = logging.getLogger(__name__)
 
-
+@ProviderRegistry.register_llm("ollama") # <-- V2
 class OllamaLLM(BaseLLM):
     def __init__(self, model_name: str, temperature: float = 0.1, base_url: str = "http://localhost:11434"):
         self.model_name = model_name

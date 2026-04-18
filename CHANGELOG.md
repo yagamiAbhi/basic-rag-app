@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-04-19
+
+### Added
+- **Provider Registry Pattern:** Created `core/registry.py` to handle dynamic tracking and instantiation of all application providers.
+- **Decorator Routing:** Added `@ProviderRegistry` decorators to all existing classes in the `providers/` directory to enable automatic registration.
+- **Plugin Manifest:** Added `providers/__init__.py` to trigger provider registrations securely at runtime.
+
+### Changed
+- **Component Factory Optimization:** Completely removed hardcoded provider imports and `if/elif` conditional logic from `factories/component_factory.py`. The factory now resolves dependencies dynamically via registry string lookups driven by `config.yaml`.
+- **README Updates:** Updated the Developer Guide to reflect the zero-modification extensibility workflow using the new registry architecture.
+
 ## [1.0.0] - 2026-04-19
 
 ### Added

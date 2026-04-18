@@ -4,10 +4,11 @@ import uuid
 from typing import List
 from interfaces.document_loader import BaseDocumentLoader
 from core.entities import Document
+from core.registry import ProviderRegistry # <-- V2
 
 logger = logging.getLogger(__name__)
 
-
+@ProviderRegistry.register_loader("txt") # <-- V2
 class TxtDocumentLoader(BaseDocumentLoader):
     def load(self, file_path: str) -> List[Document]:
         logger.debug("Loading text file: %s", file_path)

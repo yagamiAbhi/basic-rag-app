@@ -3,10 +3,11 @@ import chromadb
 from typing import List
 from interfaces.vector_store import BaseVectorStore
 from core.entities import Document
+from core.registry import ProviderRegistry # <-- V2
 
 logger = logging.getLogger(__name__)
 
-
+@ProviderRegistry.register_vector_store("chroma") # <-- V2
 class ChromaVectorStore(BaseVectorStore):
     def __init__(self, collection_name: str, persist_directory: str = "./chroma_db"):
         # This creates a local SQLite-backed database on your hard drive

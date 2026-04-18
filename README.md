@@ -12,7 +12,7 @@ Unlike standard RAG tutorials that tightly couple business logic to specific fra
 
 ## 🏗️ Architecture
 
-The system is strictly separated into Contracts (Interfaces), Workstations (Modules), and Concrete Tools (Providers). The `ComponentFactory` wires them together at runtime based on `config.yaml`.
+The system is strictly separated into Contracts (Interfaces), Workstations (Modules), and Concrete Tools (Providers). The `ComponentFactory` dynamically resolves dependencies at runtime using a **Provider Registry**, ensuring the core logic remains closed for modification but completely open for extension.
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,8 @@ basic-rag-app/
 ├── config.yaml                 # System behavior and provider toggles
 ├── requirements.txt            # Python dependencies
 ├── core/
-│   └── entities.py             # Shared data models (e.g., Document)
+│   ├── entities.py             # Shared data models (e.g., Document)
+│   └── registry.py             # Provider Registry for dynamic class loading
 ├── interfaces/                 # Abstract Base Classes (The Contracts)
 │   ├── document_loader.py
 │   ├── embedder.py
@@ -81,18 +82,19 @@ basic-rag-app/
 │   ├── ingestion/              # ETL pipeline (Load, Chunk, Embed, Store)
 │   └── retrieval/              # Vector search and reranking logic
 ├── providers/                  # Concrete implementations
+│   ├── __init__.py             # Triggers decorator registrations
 │   ├── chroma/                 # ChromaDB vector store
 │   ├── local/                  # Local implementations (Ollama, Txt loader)
 │   └── openai/                 # OpenAI API implementations (optional)
 └── factories/
-    └── component_factory.py    # Dependency injection logic
+    └── component_factory.py    # Dependency injection logic via Registry lookup
 ```
 
 ## ⚡ Getting Started
 
 ### 1. Prerequisites
 
-By default, Version 1.0 runs entirely locally using Ollama. Ensure Ollama is installed and running, then pull the required models:
+By default, the application runs entirely locally using Ollama. Ensure Ollama is installed and running, then pull the required models:
 
 ```bash
 ollama pull qwen3:8b-q4_K_M
@@ -125,17 +127,20 @@ The application ingests the document, stores embeddings in local ChromaDB, and o
 
 ## 🧠 Extensibility (Developer Guide)
 
-Because of the decoupled architecture, adding features is safe and straightforward. You should rarely need to modify `modules/`.
+This application utilizes a Provider Registry pattern. Adding new features (like a Gemini LLM or a specialized medical data loader) requires absolutely no modifications to the core factory or `modules/` directory.
 
-Example: adding PDF support
-1. Create `providers/local/pdf_loader.py`.
-2. Inherit from `BaseDocumentLoader` and implement `load()`.
-3. Update `config.yaml` to include a PDF toggle/provider selection.
-4. Update `ComponentFactory` to instantiate your loader when configured.
+Example: adding a Gemini LLM provider
+1. Create `providers/gemini/llm.py`.
+2. Inherit from `BaseLLM` and implement `generate()`.
+3. Add the `@ProviderRegistry.register_llm("gemini")` decorator to your class.
+4. Import your new file in `providers/__init__.py`.
+5. Update `config.yaml` to use `"gemini"`.
+6. The factory will dynamically resolve and instantiate your new class at runtime.
 
-## 🗺️ Roadmap (V2 Preview)
+## 🗺️ Roadmap
 
-- [ ] Advanced ingestion: support PDFs, CSVs, and web scraping.
-- [ ] Semantic chunking: smarter text splitting inside the ingestion module.
+- [ ] Advanced ingestion: support PDFs, CSVs, and specialized web scraping.
+- [ ] Semantic chunking: smarter text splitting strategies inside the ingestion module.
 - [ ] Advanced retrieval: integrate a cross-encoder reranker to improve search accuracy.
 - [ ] Settings validation: implement `pydantic` in `config/settings.py` for strict config validation.
+- [ ] Long-term memory engine: transition from standard conversational arrays to an optimized chat history manager.

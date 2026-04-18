@@ -3,10 +3,11 @@ import requests
 from typing import List
 from interfaces.embedder import BaseEmbedder
 from core.entities import Document
+from core.registry import ProviderRegistry # <-- V2
 
 logger = logging.getLogger(__name__)
 
-
+@ProviderRegistry.register_embedder("ollama") # <-- V2
 class OllamaEmbedder(BaseEmbedder):
     def __init__(self, model_name: str, base_url: str = "http://127.0.0.1:11434"):
         self.model_name = model_name
